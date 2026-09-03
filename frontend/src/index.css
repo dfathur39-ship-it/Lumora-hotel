@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  LUMORA design tokens
+  Palette:
+    --background:      #0B0E12  (near-black ink, slightly warm)
+    --foreground:       #F4EFE6  (warm ivory)
+    --primary (gold):   #C9A15A  (champagne gold — signature accent)
+    --secondary:        #1B2129  (deep slate panel)
+    --muted:            #6B7280  (cool stone)
+    --card:             #12161C
+*/
+
+@layer base {
+  :root {
+    --background: 220 20% 5%;
+    --foreground: 40 33% 92%;
+    --card: 220 16% 9%;
+    --card-foreground: 40 33% 92%;
+    --primary: 38 46% 58%;
+    --primary-foreground: 220 20% 8%;
+    --secondary: 220 14% 13%;
+    --secondary-foreground: 40 33% 92%;
+    --muted: 220 10% 20%;
+    --muted-foreground: 220 8% 62%;
+    --accent: 38 46% 58%;
+    --accent-foreground: 220 20% 8%;
+    --border: 220 12% 18%;
+    --input: 220 12% 18%;
+    --ring: 38 46% 58%;
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 40 33% 96%;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, hsl(38 46% 58% / 0.08), transparent);
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.3);
+  }
+
+  /* thin gold scrollbar, subtle */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 999px;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .text-gradient-gold {
+    background: linear-gradient(120deg, #E8CD97 0%, #C9A15A 45%, #8C6D3A 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .glass-panel {
+    background: rgba(18, 22, 28, 0.55);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(201, 161, 90, 0.15);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
