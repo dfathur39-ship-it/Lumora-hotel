@@ -34,12 +34,17 @@ const emptyRoom = {
   amenities: '',
 };
 
+// The room list in this form holds raw string inputs (before they're
+// converted to numbers/arrays and sent to the API) — this is a distinct
+// shape from the final `Room` type used elsewhere in the app.
+type RoomFormState = typeof emptyRoom & { id?: string };
+
 export default function AdminHotels() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
-  const [rooms, setRooms] = useState<Room[]>([]);
+  const [rooms, setRooms] = useState<RoomFormState[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -198,7 +203,7 @@ export default function AdminHotels() {
     setRooms(rooms.filter((_, i) => i !== index));
   }
 
-  function updateRoom(index: number, field: keyof Room, value: string) {
+  function updateRoom(index: number, field: keyof RoomFormState, value: string) {
     const newRooms = [...rooms];
     newRooms[index] = { ...newRooms[index], [field]: value };
     setRooms(newRooms);

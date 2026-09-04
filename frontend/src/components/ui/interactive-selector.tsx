@@ -45,7 +45,7 @@ const InteractiveSelector = () => {
   };
 
   useEffect(() => {
-    const timers: number[] = [];
+    const timers: ReturnType<typeof setTimeout>[] = [];
     
     options.forEach((_, i) => {
       const timer = setTimeout(() => {
