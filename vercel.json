@@ -6,8 +6,7 @@
     },
     "backend": {
       "root": "backend",
-      "framework": "go",
-      "entrypoint": "cmd/server/main.go"
+      "framework": "go"
     }
   },
   "rewrites": [
