@@ -23,6 +23,12 @@ type Config struct {
 	PayPalMode         string
 	PayPalReturnURL    string
 	PayPalCancelURL    string
+
+	// Supabase Storage (used for uploaded images — required on serverless
+	// hosts like Vercel where the local filesystem is not persistent).
+	SupabaseURL        string
+	SupabaseServiceKey string
+	SupabaseBucket     string
 }
 
 // Load reads environment variables (via .env in development) into a Config.
@@ -34,7 +40,7 @@ func Load() *Config {
 		"../.env",
 		"../../.env",
 	}
-	
+
 	var envFound bool
 	for _, path := range envPaths {
 		if _, err := os.Stat(path); err == nil {
@@ -44,7 +50,7 @@ func Load() *Config {
 			}
 		}
 	}
-	
+
 	if !envFound {
 		log.Println("no .env file found, relying on real environment variables")
 	}
@@ -60,6 +66,10 @@ func Load() *Config {
 		PayPalMode:         getEnv("PAYPAL_MODE", "sandbox"),
 		PayPalReturnURL:    getEnv("PAYPAL_RETURN_URL", "http://localhost:5173/payment/paypal/return"),
 		PayPalCancelURL:    getEnv("PAYPAL_CANCEL_URL", "http://localhost:5173/payment/paypal/cancel"),
+
+		SupabaseURL:        getEnv("SUPABASE_URL", ""),
+		SupabaseServiceKey: getEnv("SUPABASE_SERVICE_KEY", ""),
+		SupabaseBucket:     getEnv("SUPABASE_BUCKET", "lumora-uploads"),
 	}
 
 	if cfg.DatabaseURL == "" {

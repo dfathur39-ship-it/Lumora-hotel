@@ -1,13 +1,21 @@
-package main
+// Package handler is the Vercel Go serverless entrypoint for the Lumora
+// backend. It builds the exact same Fiber application used by
+// cmd/server/main.go (same routes, same handlers) and wraps it as a
+// standard net/http handler using Fiber's built-in adaptor, which is what
+// Vercel's Go runtime requires.
+//
+// Every request to the deployed backend (any path) is routed here — see
+// vercel.json's rewrite rule.
+package handler
 
 import (
 	"log"
-	"os"
-	"path/filepath"
+	"net/http"
+	"sync"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
 	"lumora-backend/config"
@@ -19,19 +27,20 @@ import (
 	"lumora-backend/services/payment"
 )
 
-func main() {
-	// Try to load .env from backend directory
-	_, err := os.Stat(filepath.Join("..", "..", ".env"))
-	if err == nil {
-		log.Println("Loading .env from backend directory")
-	}
+var (
+	httpHandler http.HandlerFunc
+	initOnce    sync.Once
+)
 
+// buildHandler wires up the whole app exactly once per warm serverless
+// instance (subsequent requests to the same warm instance reuse it, which
+// also reuses the database connection pool instead of reconnecting on
+// every single request).
+func buildHandler() http.HandlerFunc {
 	cfg := config.Load()
 
 	db := database.Connect(cfg.DatabaseURL)
-	defer db.Close()
 
-	// Repositories
 	userRepo := repositories.NewUserRepository(db)
 	hotelRepo := repositories.NewHotelRepository(db)
 	roomRepo := repositories.NewRoomRepository(db)
@@ -41,13 +50,9 @@ func main() {
 	passwordResetRepo := repositories.NewPasswordResetRepository(db)
 	contactRepo := repositories.NewContactRepository(db)
 
-	// Services
 	authService := services.NewAuthService(userRepo, passwordResetRepo, cfg.JWTSecret)
 	bookingService := services.NewBookingService(bookingRepo, roomRepo, hotelRepo)
 
-	// Payment providers — QRIS and card/BCA are in-process sandbox
-	// providers (see services/payment for why); PayPal is a real Orders v2
-	// integration that only activates if credentials are configured.
 	qrisProvider := payment.NewQRISSandboxProvider()
 	cardProvider := payment.NewCardSandboxProvider()
 	var paypalProvider *payment.PayPalProvider
@@ -59,7 +64,6 @@ func main() {
 	paymentService := payment.NewService(qrisProvider, cardProvider, paypalProvider)
 	paymentOrchestrator := services.NewPaymentOrchestrator(bookingRepo, paymentService)
 
-	// Handlers
 	h := routes.Handlers{
 		Auth:     handlers.NewAuthHandler(authService, userRepo),
 		Hotel:    handlers.NewHotelHandler(hotelRepo, roomRepo, reviewRepo),
@@ -79,7 +83,6 @@ func main() {
 	})
 
 	app.Use(recover.New())
-	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.CORSOrigin,
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
@@ -89,10 +92,21 @@ func main() {
 
 	routes.Register(app, h, authService)
 
-	log.Printf("LUMORA API listening on :%s", cfg.Port)
-	if err := app.Listen(":" + cfg.Port); err != nil {
-		log.Fatalf("server error: %v", err)
-	}
+	return adaptor.FiberApp(app)
+}
+
+// Handler is the exported entrypoint Vercel's Go runtime calls for every
+// request.
+func Handler(w http.ResponseWriter, r *http.Request) {
+	initOnce.Do(func() {
+		httpHandler = buildHandler()
+	})
+
+	// Required so Fiber sees the correct request path when converting the
+	// net/http request into its internal fasthttp representation.
+	r.RequestURI = r.URL.String()
+
+	httpHandler(w, r)
 }
 
 func errorHandler(c *fiber.Ctx, err error) error {
