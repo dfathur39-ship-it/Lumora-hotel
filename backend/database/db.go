@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -15,7 +16,20 @@ func Connect(databaseURL string) *pgxpool.Pool {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	pool, err := pgxpool.New(ctx, databaseURL)
+	cfg, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		log.Fatalf("invalid DATABASE_URL: %v", err)
+	}
+
+	// Required when DATABASE_URL points at Supabase's Transaction Pooler
+	// (PgBouncer in transaction mode, typically port 6543) — the default
+	// pgx protocol relies on server-side prepared statements, which
+	// PgBouncer's transaction pooling does not support across pooled
+	// connections. Simple protocol mode avoids that entirely. This is
+	// also safe and has no downside when connecting directly (port 5432).
+	cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		log.Fatalf("unable to create connection pool: %v", err)
 	}
